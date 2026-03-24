@@ -1,13 +1,17 @@
 import streamlit as st
 import pandas as pd
+import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+# 🔑 Add your TMDB API key here
+API_KEY = "YOUR_API_KEY_HERE"
 
 # Load dataset
 movies = pd.read_csv('movies.csv')
 
-# Ensure required columns exist
-for col in ['description', 'genres', 'poster_path']:
+# Fill missing values
+for col in ['title', 'description', 'genres']:
     if col not in movies.columns:
         movies[col] = ''
     movies[col] = movies[col].fillna('')
@@ -19,7 +23,7 @@ movies['combined'] = movies['description'] + " " + movies['genres']
 tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix = tfidf.fit_transform(movies['combined'])
 
-# Cosine similarity
+# Similarity
 cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
 
 # Recommendation function
@@ -35,29 +39,18 @@ def get_recommendations(title):
 
     return movies.iloc[movie_indices]
 
-# Function to get poster
-def get_poster(row):
+# 🔥 Fetch poster from TMDB
+def fetch_poster(movie_title):
+    url = f"https://api.themoviedb.org/3/search/movie?api_key={API_KEY}&query={movie_title}"
+    data = requests.get(url).json()
+
     try:
-        # If poster_path exists and valid
-        if isinstance(row['poster_path'], str) and row['poster_path'].strip() != "":
-            
-            # If already full URL
-            if row['poster_path'].startswith("http"):
-                return row['poster_path']
-            
-            # If TMDB path
-            elif row['poster_path'].startswith("/"):
-                return f"https://image.tmdb.org/t/p/w500{row['poster_path']}"
-
-        # Otherwise → return placeholder
-        return "https://via.placeholder.com/150x220.png?text=No+Image"
-
+        poster_path = data['results'][0]['poster_path']
+        return f"https://image.tmdb.org/t/p/w500{poster_path}"
     except:
-        return "https://via.placeholder.com/150x220.png?text=No+Image"
+        return "https://via.placeholder.com/150x220.png?text=No+Poster"
 
 # UI
-poster_url = get_poster(row)
-st.image(poster_url, width=150)
 st.title("🎬 Movie Recommendation System")
 
 movie_title = st.selectbox(
@@ -75,7 +68,7 @@ if st.button("Show Recommendations"):
 
         for i, (_, row) in enumerate(recommendations.iterrows()):
             with cols[i]:
-                poster_url = get_poster(row)
-                st.image(poster_url, width=150)
+                poster = fetch_poster(row['title'])
+                st.image(poster, width=150)
                 st.write(f"**{row['title']}**")
                 st.write(f"🎭 {row['genres']}")
