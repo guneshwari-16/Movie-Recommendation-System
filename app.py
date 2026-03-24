@@ -6,7 +6,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Load dataset
 movies = pd.read_csv('movies.csv')
 
-# Ensure necessary columns exist
+# Ensure required columns exist
 for col in ['description', 'genres', 'poster_path']:
     if col not in movies.columns:
         movies[col] = ''
@@ -15,7 +15,7 @@ for col in ['description', 'genres', 'poster_path']:
 # Combine features
 movies['combined'] = movies['description'] + " " + movies['genres']
 
-# TF-IDF vectorization
+# TF-IDF
 tfidf = TfidfVectorizer(stop_words='english')
 tfidf_matrix = tfidf.fit_transform(movies['combined'])
 
@@ -35,7 +35,21 @@ def get_recommendations(title):
 
     return movies.iloc[movie_indices]
 
-# Streamlit UI
+# Function to get poster
+def get_poster(row):
+    # Case 1: If poster_path is a FULL URL
+    if row['poster_path'].startswith('http'):
+        return row['poster_path']
+
+    # Case 2: If poster_path is like /abc.jpg
+    elif row['poster_path']:
+        return f"https://image.tmdb.org/t/p/w500{row['poster_path']}"
+
+    # Case 3: No image → default placeholder
+    else:
+        return "https://via.placeholder.com/150x220.png?text=No+Poster"
+
+# UI
 st.set_page_config(page_title="Movie Recommender", layout="wide")
 
 st.title("🎬 Movie Recommendation System")
@@ -55,11 +69,7 @@ if st.button("Show Recommendations"):
 
         for i, (_, row) in enumerate(recommendations.iterrows()):
             with cols[i]:
-                poster_url = (
-                    f"https://image.tmdb.org/t/p/w500{row['poster_path']}"
-                    if row['poster_path']
-                    else "https://via.placeholder.com/150x220.png?text=No+Poster"
-                )
+                poster_url = get_poster(row)
                 st.image(poster_url, width=150)
                 st.write(f"**{row['title']}**")
                 st.write(f"🎭 {row['genres']}")
