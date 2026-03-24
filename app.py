@@ -37,21 +37,27 @@ def get_recommendations(title):
 
 # Function to get poster
 def get_poster(row):
-    # Case 1: If poster_path is a FULL URL
-    if row['poster_path'].startswith('http'):
-        return row['poster_path']
+    try:
+        # If poster_path exists and valid
+        if isinstance(row['poster_path'], str) and row['poster_path'].strip() != "":
+            
+            # If already full URL
+            if row['poster_path'].startswith("http"):
+                return row['poster_path']
+            
+            # If TMDB path
+            elif row['poster_path'].startswith("/"):
+                return f"https://image.tmdb.org/t/p/w500{row['poster_path']}"
 
-    # Case 2: If poster_path is like /abc.jpg
-    elif row['poster_path']:
-        return f"https://image.tmdb.org/t/p/w500{row['poster_path']}"
+        # Otherwise → return placeholder
+        return "https://via.placeholder.com/150x220.png?text=No+Image"
 
-    # Case 3: No image → default placeholder
-    else:
-        return "https://via.placeholder.com/150x220.png?text=No+Poster"
+    except:
+        return "https://via.placeholder.com/150x220.png?text=No+Image"
 
 # UI
-st.set_page_config(page_title="Movie Recommender", layout="wide")
-
+poster_url = get_poster(row)
+st.image(poster_url, width=150)
 st.title("🎬 Movie Recommendation System")
 
 movie_title = st.selectbox(
